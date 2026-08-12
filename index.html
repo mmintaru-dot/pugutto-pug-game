@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffb7c8">
+  <title>ぱぐっと！— パグ育成ゲーム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sparkles" aria-hidden="true">✦　·　✧　·　✦</div>
+  <main class="app">
+    <header class="topbar">
+      <div><p class="eyebrow">MY LITTLE PUG</p><h1>ぱぐっと！</h1></div>
+      <div class="coins" aria-label="所持コイン"><span>🪙</span><strong id="coinText">0</strong></div>
+    </header>
+
+    <section id="startScreen" class="card start-card">
+      <div class="mini-pug" aria-hidden="true">🐾</div>
+      <p class="eyebrow">WELCOME HOME!</p>
+      <h2>きみのパグに<br>名前をつけよう</h2>
+      <label for="nameInput">パグの名前</label>
+      <input id="nameInput" maxlength="12" placeholder="例：こむぎ" autocomplete="off">
+      <button id="startButton" class="primary big">育てる！</button>
+      <p id="nameError" class="error" aria-live="polite"></p>
+    </section>
+
+    <div id="gameScreen" hidden>
+      <section class="hero card">
+        <div class="identity"><div><span id="pugName">こむぎ</span><button id="renameButton" class="icon-btn" aria-label="名前を変更">✎</button></div><span class="level">LEVEL <b id="levelText">1</b></span></div>
+        <div class="xp-wrap"><div class="xp-label"><span>経験値</span><span><b id="xpText">0</b> / <b id="xpGoalText">40</b></span></div><div class="meter xp"><i id="xpBar"></i></div></div>
+        <div class="scene">
+          <div class="sun" aria-hidden="true"></div><div class="cloud c1" aria-hidden="true"></div><div class="cloud c2" aria-hidden="true"></div>
+          <div id="pug" class="pug" role="img" aria-label="かわいいパグ">
+            <div id="hatLayer" class="wear hat-layer"></div><div class="ear left"></div><div class="ear right"></div>
+            <div class="head"><div class="brow b1"></div><div class="brow b2"></div><div class="eye e1"></div><div class="eye e2"></div><div class="muzzle"><div class="nose"></div><div class="mouth"></div></div></div>
+            <div class="body"><div id="clothesLayer" class="wear clothes-layer"></div><div id="collarLayer" class="wear collar-layer"></div><div class="leg l1"></div><div class="leg l2"></div><div class="tail"></div></div>
+          </div>
+          <div id="speech" class="speech" aria-live="polite">いっしょに遊ぼうワン！</div>
+        </div>
+        <div id="equippedSummary" class="equipped-summary">おしゃれ：なし</div>
+      </section>
+
+      <section class="status-grid card" aria-label="パグのステータス">
+        <div class="stat"><span>🍚 お腹</span><b id="hungerValue">80</b><div class="meter"><i id="hungerBar"></i></div></div>
+        <div class="stat"><span>⚡ 元気</span><b id="energyValue">80</b><div class="meter"><i id="energyBar"></i></div></div>
+        <div class="stat"><span>💗 ごきげん</span><b id="moodValue">80</b><div class="meter"><i id="moodBar"></i></div></div>
+        <div class="stat"><span>🫧 清潔度</span><b id="cleanValue">80</b><div class="meter"><i id="cleanBar"></i></div></div>
+      </section>
+
+      <nav class="tabs" aria-label="ゲームメニュー">
+        <button class="tab active" data-tab="care">お世話</button><button class="tab" data-tab="shop">ショップ</button><button class="tab" data-tab="inventory">持ち物</button>
+      </nav>
+
+      <section id="carePanel" class="panel active">
+        <div class="daily card"><div><b>🎁 デイリーボーナス</b><small id="dailyHint">毎日コインをプレゼント！</small></div><button id="dailyButton" class="primary">受け取る</button></div>
+        <div class="actions">
+          <button data-action="meal"><span>🍖</span><b>ごはん</b><small>お腹 +30</small></button>
+          <button data-action="snack"><span>🦴</span><b>おやつ</b><small>ごきげん +12</small></button>
+          <button data-action="walk"><span>🦮</span><b>散歩</b><small>経験値・コイン</small></button>
+          <button data-action="play"><span>🎾</span><b>遊ぶ</b><small>ごきげんUP</small></button>
+          <button data-action="sleep"><span>🌙</span><b>寝る</b><small>元気 +35</small></button>
+          <button data-action="bath"><span>🛁</span><b>お風呂</b><small>清潔度 +45</small></button>
+        </div>
+      </section>
+      <section id="shopPanel" class="panel"><div class="section-title"><div><p class="eyebrow">PUG BOUTIQUE</p><h2>ショップ</h2></div><span>🪙 <b id="shopCoinText">0</b></span></div><div id="shopList" class="item-grid"></div></section>
+      <section id="inventoryPanel" class="panel"><div class="section-title"><div><p class="eyebrow">MY CLOSET</p><h2>持ち物</h2></div></div><p class="helper">帽子・首輪・洋服はタップして着せ替えできます。</p><div id="inventoryList" class="item-grid"></div></section>
+
+      <button id="resetButton" class="reset">最初からやり直す</button>
+    </div>
+  </main>
+
+  <dialog id="eventDialog"><div id="eventIcon" class="event-icon">✨</div><p class="eyebrow">HAPPY EVENT!</p><h2 id="eventTitle">イベント！</h2><p id="eventMessage"></p><button id="eventClose" class="primary big">やったー！</button></dialog>
+  <dialog id="renameDialog"><h2>名前を変える</h2><input id="renameInput" maxlength="12"><div class="dialog-buttons"><button id="renameCancel">やめる</button><button id="renameSave" class="primary">決定</button></div></dialog>
+  <script src="script.js"></script>
+</body>
+</html>
