@@ -47,7 +47,7 @@ function openWalk(){
   walk.active=true;walk.earned=0;walk.keys.clear();
   walk.coins=coinSpots.sort(()=>Math.random()-.5).slice(0,7).map((p,index)=>({id:index,x:p[0],y:p[1],value:5,collected:false}));
   $('gameScreen').hidden=true;$('walkScreen').hidden=false;
-  updateViewport();PugWorld.enter(state.world?.area||'park');renderFrame();$('parkMap').focus({preventScroll:true});walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
+  updateViewport();PugWorld.enter(state.world?.area||'park');renderFrame();$('parkMap').focus();startWalkLoop();
 }
 function closeWalk(){
   walk.active=false;walk.keys.clear();cancelAnimationFrame(walk.frame);$('walkScreen').hidden=true;$('gameScreen').hidden=false;render();window.scrollTo({top:0,behavior:'smooth'});
@@ -80,20 +80,24 @@ function walkLoop(time){
   if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.16*(walk.env?.speed||1));}
   walk.frame=requestAnimationFrame(walkLoop);
 }
+function startWalkLoop(){cancelAnimationFrame(walk.frame);walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);}
+function resumeWalkIfVisible(){if($('walkScreen').hidden||walk.active||!state)return;walk.active=true;walk.keys.clear();updateViewport();PugWorld.enter(state.world?.area||'park');renderFrame(true);startWalkLoop();}
 function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'px';pop.style.top=y+'px';$('worldLayer').appendChild(pop);setTimeout(()=>pop.remove(),750);}
 PugWorld.onAreaChange=id=>{if(!state)return;state.world.area=id;state.world.lastArea=id;save();if(walk.active){renderAreaStatic();const toast=document.createElement('span');toast.className='area-toast';toast.textContent=PugWorld.areas[id].name;$('parkMap').appendChild(toast);setTimeout(()=>toast.remove(),1600);}};
-const keyDirections={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
+const keyDirections={ArrowUp:'up',KeyW:'up',w:'up',W:'up',ArrowDown:'down',KeyS:'down',s:'down',S:'down',ArrowLeft:'left',KeyA:'left',a:'left',A:'left',ArrowRight:'right',KeyD:'right',d:'right',D:'right'};
 const directionVector={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 function pressDirection(direction){if(walk.keys.has(direction))return;walk.keys.add(direction);const [dx,dy]=directionVector[direction];moveWalk(dx,dy,2.5);}
-window.addEventListener('keydown',e=>{if(!walk.active||!keyDirections[e.key])return;e.preventDefault();pressDirection(keyDirections[e.key]);},{passive:false});
-window.addEventListener('keyup',e=>{if(keyDirections[e.key])walk.keys.delete(keyDirections[e.key]);});
+function eventDirection(e){return keyDirections[e.code]||keyDirections[e.key];}
+window.addEventListener('keydown',e=>{const direction=eventDirection(e);if(!direction)return;resumeWalkIfVisible();if(!walk.active)return;e.preventDefault();pressDirection(direction);},{passive:false});
+window.addEventListener('keyup',e=>{const direction=eventDirection(e);if(direction)walk.keys.delete(direction);});
 window.addEventListener('blur',()=>walk.keys.clear());
 document.querySelectorAll('.dpad [data-direction]').forEach(button=>{
-  const start=e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);pressDirection(button.dataset.direction);button.classList.add('pressed');};
+  const start=e=>{e.preventDefault();resumeWalkIfVisible();if(!walk.active)return;button.setPointerCapture?.(e.pointerId);pressDirection(button.dataset.direction);button.classList.add('pressed');};
   const stop=e=>{e.preventDefault();walk.keys.delete(button.dataset.direction);button.classList.remove('pressed');};
   button.addEventListener('pointerdown',start,{passive:false});button.addEventListener('pointerup',stop,{passive:false});button.addEventListener('pointercancel',stop,{passive:false});button.addEventListener('lostpointercapture',stop,{passive:false});
 });
 window.addEventListener('resize',()=>{if(walk.active){updateViewport();renderFrame(true);}},{passive:true});
+window.addEventListener('pageshow',()=>resumeWalkIfVisible(),{passive:true});
 $('openWalkButton').addEventListener('click',openWalk);
 $('returnHomeButton').addEventListener('click',closeWalk);
 $('talkButton').addEventListener('click',()=>{const n=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);if(!n)return;if(PugNPC.isDog(n)){const old=state.dogBook[n.id]||{meets:0,friendship:0};const entry={meets:old.meets+1,friendship:Math.min(100,old.friendship+10),metAt:n.area};state.dogBook[n.id]=entry;state.xp+=3;state.mood=clamp(state.mood+3);checkLevel();save();renderFrame(true);showEvent(`${n.name}とおはなし`,`${n.line}\n\n${n.breed}・${n.personality}\n仲良し度 ${entry.friendship}（${PugNPC.tier(entry.friendship)}）`,'🐾');}else{state.npcRelations[n.id]=(state.npcRelations[n.id]||0)+1;save();showEvent(n.name,n.line,n.icon);}});
