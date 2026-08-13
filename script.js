@@ -38,4 +38,46 @@ $('renameButton').addEventListener('click',()=>{$('renameInput').value=state.nam
 $('renameCancel').addEventListener('click',()=>$('renameDialog').close());
 $('renameSave').addEventListener('click',()=>{const n=$('renameInput').value.trim();if(n){state.name=n;save();render();$('renameDialog').close();}});
 $('resetButton').addEventListener('click',()=>{if(confirm('本当に最初からやり直しますか？\n育成データや持ち物はすべて消えます。')){localStorage.removeItem(SAVE_KEY);location.reload();}});
+
+// 公園のお散歩モード
+const walk = {active:false,x:50,y:52,earned:0,coins:[],keys:new Set(),frame:null,lastTime:0};
+const coinSpots = [[18,25],[35,18],[53,29],[73,22],[84,43],[66,62],[45,74],[25,62],[82,78],[14,45]];
+function openWalk(){
+  walk.active=true;walk.x=50;walk.y=52;walk.earned=0;walk.keys.clear();
+  walk.coins=coinSpots.sort(()=>Math.random()-.5).slice(0,7).map((p,index)=>({id:index,x:p[0],y:p[1],value:5,collected:false}));
+  $('gameScreen').hidden=true;$('walkScreen').hidden=false;
+  renderWalk();$('parkMap').focus();walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
+}
+function closeWalk(){
+  walk.active=false;walk.keys.clear();cancelAnimationFrame(walk.frame);$('walkScreen').hidden=true;$('gameScreen').hidden=false;render();window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderWalk(){
+  $('walkPug').style.left=walk.x+'%';$('walkPug').style.top=walk.y+'%';
+  $('walkPug').classList.toggle('moving',walk.keys.size>0);
+  $('walkCoinText').textContent=state.coins;$('walkEarnedText').textContent=walk.earned;
+  $('walkCoins').innerHTML=walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}%;top:${c.y}%">¥</span>`).join('');
+}
+function moveWalk(dx,dy,amount){
+  walk.x=Math.max(5,Math.min(95,walk.x+dx*amount));walk.y=Math.max(6,Math.min(94,walk.y+dy*amount));
+  walk.coins.forEach(c=>{if(!c.collected&&Math.hypot(walk.x-c.x,walk.y-c.y)<7){c.collected=true;walk.earned+=c.value;state.coins+=c.value;save();showCoinPop(c.x,c.y,c.value);}});
+  renderWalk();
+}
+function walkLoop(time){
+  if(!walk.active)return;const delta=Math.min(32,time-walk.lastTime);walk.lastTime=time;let dx=0,dy=0;
+  if(walk.keys.has('left'))dx--;if(walk.keys.has('right'))dx++;if(walk.keys.has('up'))dy--;if(walk.keys.has('down'))dy++;
+  if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.025);}
+  walk.frame=requestAnimationFrame(walkLoop);
+}
+function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'%';pop.style.top=y+'%';$('parkMap').appendChild(pop);setTimeout(()=>pop.remove(),750);}
+const keyDirections={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
+window.addEventListener('keydown',e=>{if(!walk.active||!keyDirections[e.key])return;e.preventDefault();walk.keys.add(keyDirections[e.key]);});
+window.addEventListener('keyup',e=>{if(keyDirections[e.key])walk.keys.delete(keyDirections[e.key]);});
+window.addEventListener('blur',()=>walk.keys.clear());
+document.querySelectorAll('.dpad [data-direction]').forEach(button=>{
+  const start=e=>{e.preventDefault();walk.keys.add(button.dataset.direction);button.classList.add('pressed');};
+  const stop=e=>{e.preventDefault();walk.keys.delete(button.dataset.direction);button.classList.remove('pressed');};
+  button.addEventListener('pointerdown',start);button.addEventListener('pointerup',stop);button.addEventListener('pointercancel',stop);button.addEventListener('pointerleave',stop);
+});
+$('openWalkButton').addEventListener('click',openWalk);
+$('returnHomeButton').addEventListener('click',closeWalk);
 load();if(state)render();

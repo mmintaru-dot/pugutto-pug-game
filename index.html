@@ -53,6 +53,11 @@
       </nav>
 
       <section id="carePanel" class="panel active">
+        <button id="openWalkButton" class="walk-entry">
+          <span class="walk-entry-icon">🌳</span>
+          <span><b>お散歩へ行く</b><small>公園でコインを集めよう！</small></span>
+          <span aria-hidden="true">▶</span>
+        </button>
         <div class="daily card"><div><b>🎁 デイリーボーナス</b><small id="dailyHint">毎日コインをプレゼント！</small></div><button id="dailyButton" class="primary">受け取る</button></div>
         <div class="actions">
           <button data-action="meal"><span>🍖</span><b>ごはん</b><small>お腹 +30</small></button>
@@ -68,6 +73,35 @@
 
       <button id="resetButton" class="reset">最初からやり直す</button>
     </div>
+
+    <section id="walkScreen" class="walk-screen" hidden aria-label="公園のお散歩モード">
+      <header class="walk-header">
+        <div><p class="eyebrow">PUG PARK</p><h2>わくわく公園</h2></div>
+        <div class="walk-wallet"><span>🪙</span><strong id="walkCoinText">0</strong></div>
+      </header>
+      <div class="walk-info card">
+        <span>公園のコインを集めよう！</span>
+        <b>今回 +<span id="walkEarnedText">0</span></b>
+      </div>
+      <div id="parkMap" class="park-map" tabindex="0" aria-label="矢印キーまたはWASDでパグを動かす公園マップ">
+        <div class="park-path"></div>
+        <div class="pond" aria-hidden="true">〰</div>
+        <div class="tree tree-one" aria-hidden="true">🌳</div>
+        <div class="tree tree-two" aria-hidden="true">🌲</div>
+        <div class="tree tree-three" aria-hidden="true">🌳</div>
+        <div class="bench" aria-hidden="true">🪵</div>
+        <div id="walkCoins" aria-hidden="true"></div>
+        <div id="walkPug" class="walk-pug" role="img" aria-label="お散歩中のパグ"><span>🐶</span></div>
+      </div>
+      <p class="keyboard-hint">キーボード：矢印キー / WASD</p>
+      <div class="dpad" aria-label="パグの方向操作">
+        <button class="up" data-direction="up" aria-label="上へ">▲</button>
+        <button class="left" data-direction="left" aria-label="左へ">◀</button>
+        <button class="down" data-direction="down" aria-label="下へ">▼</button>
+        <button class="right" data-direction="right" aria-label="右へ">▶</button>
+      </div>
+      <button id="returnHomeButton" class="return-home">🏠 おうちに帰る</button>
+    </section>
   </main>
 
   <dialog id="eventDialog"><div id="eventIcon" class="event-icon">✨</div><p class="eyebrow">HAPPY EVENT!</p><h2 id="eventTitle">イベント！</h2><p id="eventMessage"></p><button id="eventClose" class="primary big">やったー！</button></dialog>
