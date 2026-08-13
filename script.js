@@ -41,53 +41,62 @@ $('renameSave').addEventListener('click',()=>{const n=$('renameInput').value.tri
 $('resetButton').addEventListener('click',()=>{if(confirm('本当に最初からやり直しますか？\n育成データや持ち物はすべて消えます。')){localStorage.removeItem(SAVE_KEY);location.reload();}});
 
 // 公園のお散歩モード
-const walk = {active:false,earned:0,coins:[],keys:new Set(),frame:null,lastTime:0,areaChanged:false};
+const walk = {active:false,earned:0,coins:[],keys:new Set(),frame:null,lastTime:0,viewW:0,viewH:0,nearId:null,moving:false,env:null};
 const coinSpots = [[170,180],[310,120],[480,205],[690,185],[780,300],[500,510],[290,525]];
 function openWalk(){
   walk.active=true;walk.earned=0;walk.keys.clear();
   walk.coins=coinSpots.sort(()=>Math.random()-.5).slice(0,7).map((p,index)=>({id:index,x:p[0],y:p[1],value:5,collected:false}));
   $('gameScreen').hidden=true;$('walkScreen').hidden=false;
-  PugWorld.enter(state.world?.area||'park');renderWalk();$('parkMap').focus();walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
+  updateViewport();PugWorld.enter(state.world?.area||'park');renderFrame();$('parkMap').focus({preventScroll:true});walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
 }
 function closeWalk(){
   walk.active=false;walk.keys.clear();cancelAnimationFrame(walk.frame);$('walkScreen').hidden=true;$('gameScreen').hidden=false;render();window.scrollTo({top:0,behavior:'smooth'});
 }
-function renderWalk(){
-  $('walkPug').style.left=PugWorld.x+'px';$('walkPug').style.top=PugWorld.y+'px';
-  $('walkPug').classList.toggle('moving',walk.keys.size>0);
-  $('walkCoinText').textContent=state.coins;$('walkEarnedText').textContent=walk.earned;
+function updateViewport(){const view=$('parkMap');walk.viewW=view.clientWidth;walk.viewH=view.clientHeight;}
+function renderAreaStatic(){
+  walk.env=PugWorld.environment();
   $('areaNameText').textContent=PugWorld.areas[PugWorld.current].name;$('areaGuideText').textContent=PugWorld.areas[PugWorld.current].guide;
-  const env=PugWorld.environment();$('seasonText').textContent=env.season;$('periodText').textContent=env.period;$('weatherText').textContent=env.weather;
-  $('walkCoins').innerHTML=PugWorld.current==='park'?walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}px;top:${c.y}px">¥</span>`).join(''):'';
+  $('seasonText').textContent=walk.env.season;$('periodText').textContent=walk.env.period;$('weatherText').textContent=walk.env.weather;
+  renderCoins();
   $('npcLayer').innerHTML=PugNPC.inArea(PugWorld.current).map(n=>`<div class="world-npc ${PugNPC.isDog(n)?'dog':'human'}" style="left:${n.x}px;top:${n.y}px" aria-label="${n.name}"><span>${n.icon}</span><b>${n.name}</b></div>`).join('');
-  const near=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);$('talkButton').disabled=!near;$('talkButton').textContent=near?`💬 ${near.name}と話す`:'💬 近くの相手と話す';
-  const view=$('parkMap'),camera=PugWorld.camera(view.clientWidth,view.clientHeight);$('worldLayer').style.transform=`translate3d(${camera.x}px,${camera.y}px,0)`;
+  walk.nearId=null;renderFrame(true);
 }
+function renderCoins(){$('walkCoinText').textContent=state.coins;$('walkEarnedText').textContent=walk.earned;$('walkCoins').innerHTML=PugWorld.current==='park'?walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}px;top:${c.y}px">¥</span>`).join(''):'';}
+function renderFrame(force=false){
+  $('walkPug').style.transform=`translate3d(${PugWorld.x}px,${PugWorld.y}px,0) translate(-50%,-50%)`;
+  const moving=walk.keys.size>0;if(force||moving!==walk.moving){walk.moving=moving;$('walkPug').classList.toggle('moving',moving);}
+  const near=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y),nearId=near?.id||null;if(force||nearId!==walk.nearId){walk.nearId=nearId;$('talkButton').disabled=!near;$('talkButton').textContent=near?`💬 ${near.name}と話す`:'💬 近くの相手と話す';}
+  const camera=PugWorld.camera(walk.viewW,walk.viewH);$('worldLayer').style.transform=`translate3d(${camera.x}px,${camera.y}px,0)`;
+}
+function renderWalk(){renderAreaStatic();}
 function moveWalk(dx,dy,amount){
   const changed=PugWorld.move(dx,dy,amount);if(changed){state.world.area=PugWorld.current;state.world.lastArea=PugWorld.current;save();}
-  if(PugWorld.current==='park')walk.coins.forEach(c=>{if(!c.collected&&Math.hypot(PugWorld.x-c.x,PugWorld.y-c.y)<48){c.collected=true;walk.earned+=c.value;state.coins+=c.value;save();showCoinPop(c.x,c.y,c.value);}});
-  renderWalk();
+  let collected=false;if(PugWorld.current==='park')walk.coins.forEach(c=>{if(!c.collected&&Math.hypot(PugWorld.x-c.x,PugWorld.y-c.y)<48){c.collected=true;walk.earned+=c.value;state.coins+=c.value;collected=true;save();showCoinPop(c.x,c.y,c.value);}});if(collected)renderCoins();
+  renderFrame();
 }
 function walkLoop(time){
   if(!walk.active)return;const delta=Math.min(32,time-walk.lastTime);walk.lastTime=time;let dx=0,dy=0;
   if(walk.keys.has('left'))dx--;if(walk.keys.has('right'))dx++;if(walk.keys.has('up'))dy--;if(walk.keys.has('down'))dy++;
-  if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.025*PugWorld.environment().speed);}
+  if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.16*(walk.env?.speed||1));}
   walk.frame=requestAnimationFrame(walkLoop);
 }
 function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'px';pop.style.top=y+'px';$('worldLayer').appendChild(pop);setTimeout(()=>pop.remove(),750);}
-PugWorld.onAreaChange=id=>{if(!state)return;state.world.area=id;state.world.lastArea=id;save();if(walk.active){const toast=document.createElement('span');toast.className='area-toast';toast.textContent=PugWorld.areas[id].name;$('parkMap').appendChild(toast);setTimeout(()=>toast.remove(),1600);}};
+PugWorld.onAreaChange=id=>{if(!state)return;state.world.area=id;state.world.lastArea=id;save();if(walk.active){renderAreaStatic();const toast=document.createElement('span');toast.className='area-toast';toast.textContent=PugWorld.areas[id].name;$('parkMap').appendChild(toast);setTimeout(()=>toast.remove(),1600);}};
 const keyDirections={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
-window.addEventListener('keydown',e=>{if(!walk.active||!keyDirections[e.key])return;e.preventDefault();walk.keys.add(keyDirections[e.key]);});
+const directionVector={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+function pressDirection(direction){if(walk.keys.has(direction))return;walk.keys.add(direction);const [dx,dy]=directionVector[direction];moveWalk(dx,dy,2.5);}
+window.addEventListener('keydown',e=>{if(!walk.active||!keyDirections[e.key])return;e.preventDefault();pressDirection(keyDirections[e.key]);},{passive:false});
 window.addEventListener('keyup',e=>{if(keyDirections[e.key])walk.keys.delete(keyDirections[e.key]);});
 window.addEventListener('blur',()=>walk.keys.clear());
 document.querySelectorAll('.dpad [data-direction]').forEach(button=>{
-  const start=e=>{e.preventDefault();walk.keys.add(button.dataset.direction);button.classList.add('pressed');};
+  const start=e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);pressDirection(button.dataset.direction);button.classList.add('pressed');};
   const stop=e=>{e.preventDefault();walk.keys.delete(button.dataset.direction);button.classList.remove('pressed');};
-  button.addEventListener('pointerdown',start);button.addEventListener('pointerup',stop);button.addEventListener('pointercancel',stop);button.addEventListener('pointerleave',stop);
+  button.addEventListener('pointerdown',start,{passive:false});button.addEventListener('pointerup',stop,{passive:false});button.addEventListener('pointercancel',stop,{passive:false});button.addEventListener('lostpointercapture',stop,{passive:false});
 });
+window.addEventListener('resize',()=>{if(walk.active){updateViewport();renderFrame(true);}},{passive:true});
 $('openWalkButton').addEventListener('click',openWalk);
 $('returnHomeButton').addEventListener('click',closeWalk);
-$('talkButton').addEventListener('click',()=>{const n=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);if(!n)return;if(PugNPC.isDog(n)){const old=state.dogBook[n.id]||{meets:0,friendship:0};const entry={meets:old.meets+1,friendship:Math.min(100,old.friendship+10),metAt:n.area};state.dogBook[n.id]=entry;state.xp+=3;state.mood=clamp(state.mood+3);checkLevel();save();renderWalk();showEvent(`${n.name}とおはなし`,`${n.line}\n\n${n.breed}・${n.personality}\n仲良し度 ${entry.friendship}（${PugNPC.tier(entry.friendship)}）`,'🐾');}else{state.npcRelations[n.id]=(state.npcRelations[n.id]||0)+1;save();showEvent(n.name,n.line,n.icon);}});
+$('talkButton').addEventListener('click',()=>{const n=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);if(!n)return;if(PugNPC.isDog(n)){const old=state.dogBook[n.id]||{meets:0,friendship:0};const entry={meets:old.meets+1,friendship:Math.min(100,old.friendship+10),metAt:n.area};state.dogBook[n.id]=entry;state.xp+=3;state.mood=clamp(state.mood+3);checkLevel();save();renderFrame(true);showEvent(`${n.name}とおはなし`,`${n.line}\n\n${n.breed}・${n.personality}\n仲良し度 ${entry.friendship}（${PugNPC.tier(entry.friendship)}）`,'🐾');}else{state.npcRelations[n.id]=(state.npcRelations[n.id]||0)+1;save();showEvent(n.name,n.line,n.icon);}});
 function renderDogBook(){const met=PugNPC.dogs.filter(d=>state.dogBook[d.id]);$('dogBookCount').textContent=`出会った犬 ${met.length} / ${PugNPC.dogs.length}`;$('dogBookList').innerHTML=PugNPC.dogs.map(d=>{const e=state.dogBook[d.id];return e?`<article class="dog-card"><span>${d.icon}</span><div><h3>${d.name} <small>${d.breed}</small></h3><p>${d.personality}｜好物：${d.favorite}<br>出会った場所：${PugWorld.areas[e.metAt].name}｜${e.meets}回<br><b>${PugNPC.tier(e.friendship)} ${e.friendship}/100</b></p></div></article>`:`<article class="dog-card unknown"><span>❔</span><div><h3>？？？</h3><p>まだ出会っていない犬です</p></div></article>`;}).join('');}
 $('dogBookButton').addEventListener('click',()=>{renderDogBook();$('dogBookDialog').showModal();});
 $('dogBookClose').addEventListener('click',()=>$('dogBookDialog').close());
