@@ -87,24 +87,28 @@
       <div id="parkMap" class="park-map" tabindex="0" aria-label="矢印キーまたはWASDでパグを動かす公園マップ">
         <div id="worldLayer" class="world-layer">
           <div id="worldDecor" aria-hidden="true"></div>
+          <div id="npcLayer"></div>
           <div id="walkCoins" aria-hidden="true"></div>
           <div id="walkPug" class="walk-pug" role="img" aria-label="お散歩中のパグ"><span>🐶</span></div>
         </div>
       </div>
       <p class="keyboard-hint">キーボード：矢印キー / WASD</p>
+      <button id="talkButton" class="talk-button" disabled>💬 近くの相手と話す</button>
       <div class="dpad" aria-label="パグの方向操作">
         <button class="up" data-direction="up" aria-label="上へ">▲</button>
         <button class="left" data-direction="left" aria-label="左へ">◀</button>
         <button class="down" data-direction="down" aria-label="下へ">▼</button>
         <button class="right" data-direction="right" aria-label="右へ">▶</button>
       </div>
-      <button id="returnHomeButton" class="return-home">🏠 おうちに帰る</button>
+      <div class="walk-footer"><button id="dogBookButton" class="book-button">📖 犬図鑑</button><button id="returnHomeButton" class="return-home">🏠 おうちに帰る</button></div>
     </section>
   </main>
 
   <dialog id="eventDialog"><div id="eventIcon" class="event-icon">✨</div><p class="eyebrow">HAPPY EVENT!</p><h2 id="eventTitle">イベント！</h2><p id="eventMessage"></p><button id="eventClose" class="primary big">やったー！</button></dialog>
   <dialog id="renameDialog"><h2>名前を変える</h2><input id="renameInput" maxlength="12"><div class="dialog-buttons"><button id="renameCancel">やめる</button><button id="renameSave" class="primary">決定</button></div></dialog>
+  <dialog id="dogBookDialog" class="book-dialog"><p class="eyebrow">DOG FRIENDS</p><h2>犬友達図鑑</h2><p id="dogBookCount" class="helper"></p><div id="dogBookList" class="dog-book-list"></div><button id="dogBookClose" class="primary big">とじる</button></dialog>
   <script src="world.js"></script>
+  <script src="npc.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

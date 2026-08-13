@@ -9,12 +9,12 @@ const items = [
   {id:'plush',name:'くまのぬいぐるみ',type:'toy',icon:'🧸',price:180,level:4,desc:'遊ぶ時のごきげんアップ'},
   {id:'premium',name:'高級ドッグフード',type:'food',icon:'🥩',price:160,level:3,desc:'ごはんの回復量アップ'}
 ];
-const SAVE_VERSION = 2;
-const initial = name => ({saveVersion:SAVE_VERSION,name,level:1,xp:0,hunger:80,energy:80,mood:80,clean:80,coins:120,owned:[],equipped:{hat:null,collar:null,clothes:null},lastDaily:null,actions:0,world:{area:'park',lastArea:'park'}});
+const SAVE_VERSION = 3;
+const initial = name => ({saveVersion:SAVE_VERSION,name,level:1,xp:0,hunger:80,energy:80,mood:80,clean:80,coins:120,owned:[],equipped:{hat:null,collar:null,clothes:null},lastDaily:null,actions:0,world:{area:'park',lastArea:'park'},dogBook:{},npcRelations:{}});
 let state = null;
 const $ = id => document.getElementById(id);
 function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s?.name){const base=initial(s.name);state={...base,...s,saveVersion:SAVE_VERSION,equipped:{...base.equipped,...s.equipped},world:{...base.world,...s.world}};save();}}catch(e){localStorage.removeItem(SAVE_KEY);}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s?.name){const base=initial(s.name);state={...base,...s,saveVersion:SAVE_VERSION,equipped:{...base.equipped,...s.equipped},world:{...base.world,...s.world},dogBook:{...base.dogBook,...s.dogBook},npcRelations:{...base.npcRelations,...s.npcRelations}};save();}}catch(e){localStorage.removeItem(SAVE_KEY);}}
 function xpGoal(){return 30+state.level*10;}
 function change(values){for(const [key,value] of Object.entries(values)){if(['hunger','energy','mood','clean'].includes(key))state[key]=clamp(state[key]+value);else state[key]+=value;}checkLevel();save();render();}
 function checkLevel(){while(state.xp>=xpGoal()){const oldGoal=xpGoal();state.xp-=oldGoal;state.level++;state.coins+=50;const unlocked=items.filter(i=>i.level===state.level).map(i=>i.name);setTimeout(()=>showEvent('レベルアップ！',`レベル ${state.level} になったワン！ 50コインをもらったよ。${unlocked.length?' 「'+unlocked.join('」「')+'」が解放！':''}`,'🎉'),250);}}
@@ -59,6 +59,8 @@ function renderWalk(){
   $('areaNameText').textContent=PugWorld.areas[PugWorld.current].name;$('areaGuideText').textContent=PugWorld.areas[PugWorld.current].guide;
   const env=PugWorld.environment();$('seasonText').textContent=env.season;$('periodText').textContent=env.period;$('weatherText').textContent=env.weather;
   $('walkCoins').innerHTML=PugWorld.current==='park'?walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}px;top:${c.y}px">¥</span>`).join(''):'';
+  $('npcLayer').innerHTML=PugNPC.inArea(PugWorld.current).map(n=>`<div class="world-npc ${PugNPC.isDog(n)?'dog':'human'}" style="left:${n.x}px;top:${n.y}px" aria-label="${n.name}"><span>${n.icon}</span><b>${n.name}</b></div>`).join('');
+  const near=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);$('talkButton').disabled=!near;$('talkButton').textContent=near?`💬 ${near.name}と話す`:'💬 近くの相手と話す';
   const view=$('parkMap'),camera=PugWorld.camera(view.clientWidth,view.clientHeight);$('worldLayer').style.transform=`translate3d(${camera.x}px,${camera.y}px,0)`;
 }
 function moveWalk(dx,dy,amount){
@@ -85,4 +87,8 @@ document.querySelectorAll('.dpad [data-direction]').forEach(button=>{
 });
 $('openWalkButton').addEventListener('click',openWalk);
 $('returnHomeButton').addEventListener('click',closeWalk);
+$('talkButton').addEventListener('click',()=>{const n=PugNPC.nearest(PugWorld.current,PugWorld.x,PugWorld.y);if(!n)return;if(PugNPC.isDog(n)){const old=state.dogBook[n.id]||{meets:0,friendship:0};const entry={meets:old.meets+1,friendship:Math.min(100,old.friendship+10),metAt:n.area};state.dogBook[n.id]=entry;state.xp+=3;state.mood=clamp(state.mood+3);checkLevel();save();renderWalk();showEvent(`${n.name}とおはなし`,`${n.line}\n\n${n.breed}・${n.personality}\n仲良し度 ${entry.friendship}（${PugNPC.tier(entry.friendship)}）`,'🐾');}else{state.npcRelations[n.id]=(state.npcRelations[n.id]||0)+1;save();showEvent(n.name,n.line,n.icon);}});
+function renderDogBook(){const met=PugNPC.dogs.filter(d=>state.dogBook[d.id]);$('dogBookCount').textContent=`出会った犬 ${met.length} / ${PugNPC.dogs.length}`;$('dogBookList').innerHTML=PugNPC.dogs.map(d=>{const e=state.dogBook[d.id];return e?`<article class="dog-card"><span>${d.icon}</span><div><h3>${d.name} <small>${d.breed}</small></h3><p>${d.personality}｜好物：${d.favorite}<br>出会った場所：${PugWorld.areas[e.metAt].name}｜${e.meets}回<br><b>${PugNPC.tier(e.friendship)} ${e.friendship}/100</b></p></div></article>`:`<article class="dog-card unknown"><span>❔</span><div><h3>？？？</h3><p>まだ出会っていない犬です</p></div></article>`;}).join('');}
+$('dogBookButton').addEventListener('click',()=>{renderDogBook();$('dogBookDialog').showModal();});
+$('dogBookClose').addEventListener('click',()=>$('dogBookDialog').close());
 load();if(state)render();
