@@ -80,18 +80,15 @@
         <div class="walk-wallet"><span>🪙</span><strong id="walkCoinText">0</strong></div>
       </header>
       <div class="walk-info card">
-        <span>公園のコインを集めよう！</span>
+        <span><b id="areaNameText">公園</b> <small id="areaGuideText">コインを集めよう！</small></span>
         <b>今回 +<span id="walkEarnedText">0</span></b>
       </div>
       <div id="parkMap" class="park-map" tabindex="0" aria-label="矢印キーまたはWASDでパグを動かす公園マップ">
-        <div class="park-path"></div>
-        <div class="pond" aria-hidden="true">〰</div>
-        <div class="tree tree-one" aria-hidden="true">🌳</div>
-        <div class="tree tree-two" aria-hidden="true">🌲</div>
-        <div class="tree tree-three" aria-hidden="true">🌳</div>
-        <div class="bench" aria-hidden="true">🪵</div>
-        <div id="walkCoins" aria-hidden="true"></div>
-        <div id="walkPug" class="walk-pug" role="img" aria-label="お散歩中のパグ"><span>🐶</span></div>
+        <div id="worldLayer" class="world-layer">
+          <div id="worldDecor" aria-hidden="true"></div>
+          <div id="walkCoins" aria-hidden="true"></div>
+          <div id="walkPug" class="walk-pug" role="img" aria-label="お散歩中のパグ"><span>🐶</span></div>
+        </div>
       </div>
       <p class="keyboard-hint">キーボード：矢印キー / WASD</p>
       <div class="dpad" aria-label="パグの方向操作">
@@ -106,6 +103,7 @@
 
   <dialog id="eventDialog"><div id="eventIcon" class="event-icon">✨</div><p class="eyebrow">HAPPY EVENT!</p><h2 id="eventTitle">イベント！</h2><p id="eventMessage"></p><button id="eventClose" class="primary big">やったー！</button></dialog>
   <dialog id="renameDialog"><h2>名前を変える</h2><input id="renameInput" maxlength="12"><div class="dialog-buttons"><button id="renameCancel">やめる</button><button id="renameSave" class="primary">決定</button></div></dialog>
+  <script src="world.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

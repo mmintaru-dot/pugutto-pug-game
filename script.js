@@ -9,11 +9,12 @@ const items = [
   {id:'plush',name:'くまのぬいぐるみ',type:'toy',icon:'🧸',price:180,level:4,desc:'遊ぶ時のごきげんアップ'},
   {id:'premium',name:'高級ドッグフード',type:'food',icon:'🥩',price:160,level:3,desc:'ごはんの回復量アップ'}
 ];
-const initial = name => ({name,level:1,xp:0,hunger:80,energy:80,mood:80,clean:80,coins:120,owned:[],equipped:{hat:null,collar:null,clothes:null},lastDaily:null,actions:0});
+const SAVE_VERSION = 2;
+const initial = name => ({saveVersion:SAVE_VERSION,name,level:1,xp:0,hunger:80,energy:80,mood:80,clean:80,coins:120,owned:[],equipped:{hat:null,collar:null,clothes:null},lastDaily:null,actions:0,world:{area:'park',lastArea:'park'}});
 let state = null;
 const $ = id => document.getElementById(id);
 function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s?.name) state={...initial(s.name),...s,equipped:{...initial('').equipped,...s.equipped}};}catch(e){localStorage.removeItem(SAVE_KEY);}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s?.name){const base=initial(s.name);state={...base,...s,saveVersion:SAVE_VERSION,equipped:{...base.equipped,...s.equipped},world:{...base.world,...s.world}};save();}}catch(e){localStorage.removeItem(SAVE_KEY);}}
 function xpGoal(){return 30+state.level*10;}
 function change(values){for(const [key,value] of Object.entries(values)){if(['hunger','energy','mood','clean'].includes(key))state[key]=clamp(state[key]+value);else state[key]+=value;}checkLevel();save();render();}
 function checkLevel(){while(state.xp>=xpGoal()){const oldGoal=xpGoal();state.xp-=oldGoal;state.level++;state.coins+=50;const unlocked=items.filter(i=>i.level===state.level).map(i=>i.name);setTimeout(()=>showEvent('レベルアップ！',`レベル ${state.level} になったワン！ 50コインをもらったよ。${unlocked.length?' 「'+unlocked.join('」「')+'」が解放！':''}`,'🎉'),250);}}
@@ -40,26 +41,28 @@ $('renameSave').addEventListener('click',()=>{const n=$('renameInput').value.tri
 $('resetButton').addEventListener('click',()=>{if(confirm('本当に最初からやり直しますか？\n育成データや持ち物はすべて消えます。')){localStorage.removeItem(SAVE_KEY);location.reload();}});
 
 // 公園のお散歩モード
-const walk = {active:false,x:50,y:52,earned:0,coins:[],keys:new Set(),frame:null,lastTime:0};
-const coinSpots = [[18,25],[35,18],[53,29],[73,22],[84,43],[66,62],[45,74],[25,62],[82,78],[14,45]];
+const walk = {active:false,earned:0,coins:[],keys:new Set(),frame:null,lastTime:0,areaChanged:false};
+const coinSpots = [[170,180],[310,120],[480,205],[690,185],[780,300],[500,510],[290,525]];
 function openWalk(){
-  walk.active=true;walk.x=50;walk.y=52;walk.earned=0;walk.keys.clear();
+  walk.active=true;walk.earned=0;walk.keys.clear();
   walk.coins=coinSpots.sort(()=>Math.random()-.5).slice(0,7).map((p,index)=>({id:index,x:p[0],y:p[1],value:5,collected:false}));
   $('gameScreen').hidden=true;$('walkScreen').hidden=false;
-  renderWalk();$('parkMap').focus();walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
+  PugWorld.enter(state.world?.area||'park');renderWalk();$('parkMap').focus();walk.lastTime=performance.now();walk.frame=requestAnimationFrame(walkLoop);
 }
 function closeWalk(){
   walk.active=false;walk.keys.clear();cancelAnimationFrame(walk.frame);$('walkScreen').hidden=true;$('gameScreen').hidden=false;render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderWalk(){
-  $('walkPug').style.left=walk.x+'%';$('walkPug').style.top=walk.y+'%';
+  $('walkPug').style.left=PugWorld.x+'px';$('walkPug').style.top=PugWorld.y+'px';
   $('walkPug').classList.toggle('moving',walk.keys.size>0);
   $('walkCoinText').textContent=state.coins;$('walkEarnedText').textContent=walk.earned;
-  $('walkCoins').innerHTML=walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}%;top:${c.y}%">¥</span>`).join('');
+  $('areaNameText').textContent=PugWorld.areas[PugWorld.current].name;$('areaGuideText').textContent=PugWorld.areas[PugWorld.current].guide;
+  $('walkCoins').innerHTML=PugWorld.current==='park'?walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}px;top:${c.y}px">¥</span>`).join(''):'';
+  const view=$('parkMap'),camera=PugWorld.camera(view.clientWidth,view.clientHeight);$('worldLayer').style.transform=`translate3d(${camera.x}px,${camera.y}px,0)`;
 }
 function moveWalk(dx,dy,amount){
-  walk.x=Math.max(5,Math.min(95,walk.x+dx*amount));walk.y=Math.max(6,Math.min(94,walk.y+dy*amount));
-  walk.coins.forEach(c=>{if(!c.collected&&Math.hypot(walk.x-c.x,walk.y-c.y)<7){c.collected=true;walk.earned+=c.value;state.coins+=c.value;save();showCoinPop(c.x,c.y,c.value);}});
+  const changed=PugWorld.move(dx,dy,amount);if(changed){state.world.area=PugWorld.current;state.world.lastArea=PugWorld.current;save();}
+  if(PugWorld.current==='park')walk.coins.forEach(c=>{if(!c.collected&&Math.hypot(PugWorld.x-c.x,PugWorld.y-c.y)<48){c.collected=true;walk.earned+=c.value;state.coins+=c.value;save();showCoinPop(c.x,c.y,c.value);}});
   renderWalk();
 }
 function walkLoop(time){
@@ -68,7 +71,8 @@ function walkLoop(time){
   if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.025);}
   walk.frame=requestAnimationFrame(walkLoop);
 }
-function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'%';pop.style.top=y+'%';$('parkMap').appendChild(pop);setTimeout(()=>pop.remove(),750);}
+function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'px';pop.style.top=y+'px';$('worldLayer').appendChild(pop);setTimeout(()=>pop.remove(),750);}
+PugWorld.onAreaChange=id=>{if(!state)return;state.world.area=id;state.world.lastArea=id;save();if(walk.active){const toast=document.createElement('span');toast.className='area-toast';toast.textContent=PugWorld.areas[id].name;$('parkMap').appendChild(toast);setTimeout(()=>toast.remove(),1600);}};
 const keyDirections={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
 window.addEventListener('keydown',e=>{if(!walk.active||!keyDirections[e.key])return;e.preventDefault();walk.keys.add(keyDirections[e.key]);});
 window.addEventListener('keyup',e=>{if(keyDirections[e.key])walk.keys.delete(keyDirections[e.key]);});
