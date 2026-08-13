@@ -1,28 +1,28 @@
 (function(){
   const W=900,H=650,playerSize=48;
+  const obj=(type,x,y,w,h,label='',exit=null)=>({type,x,y,w,h,label,exit});
+  const exits=(left,right)=>[...(left?[obj('exit',0,270,82,110,'← '+left.label,{to:left.to,x:785,y:325})]:[]),...(right?[obj('exit',818,270,82,110,right.label+' →',{to:right.to,x:115,y:325})]:[])];
+  const outdoors=(name,guide,theme,left,right,extras=[])=>({name,guide,theme,spawn:{x:115,y:325},objects:[obj('road',0,250,900,150),obj('tree solid',115,70,80,95,'🌳'),obj('tree solid',700,65,80,95,'🌲'),obj('fence solid',280,495,245,38),...extras,...exits(left,right)]});
+  const indoor=(name,guide,icon,back)=>({name,guide,theme:'indoor',spawn:{x:450,y:500},objects:[obj('wall solid',40,35,820,35),obj('wall solid',40,580,820,35),obj('wall solid',40,70,35,510),obj('wall solid',825,70,35,510),obj('rug',250,205,400,250,icon+' '+name),obj('solid',140,105,150,90,'🪑'),obj('solid',620,105,130,90,'🧸'),obj('exit',350,540,200,75,'出口 → '+back.label,{to:back.to,x:back.x,y:back.y})]});
   const areas={
-    home:{name:'自宅',guide:'右の玄関から住宅街へ',className:'area-home',spawn:{x:180,y:330},objects:[
-      {type:'wall solid',x:40,y:35,w:820,h:35,label:''},{type:'wall solid',x:40,y:580,w:820,h:35,label:''},{type:'wall solid',x:40,y:70,w:35,h:510,label:''},{type:'wall solid',x:825,y:70,w:35,h:205,label:''},{type:'wall solid',x:825,y:380,w:35,h:200,label:''},
-      {type:'rug',x:285,y:235,w:310,h:190,label:'🏠 ぼくのお部屋'},{type:'solid',x:115,y:95,w:190,h:95,label:'🛏️'},{type:'solid',x:650,y:100,w:105,h:85,label:'🛋️'},
-      {type:'exit',x:815,y:275,w:75,h:105,label:'玄関 →',exit:{to:'street',x:100,y:325}}
-    ]},
-    street:{name:'住宅街',guide:'左は自宅、右は公園',className:'area-street',spawn:{x:105,y:325},objects:[
-      {type:'road',x:0,y:250,w:900,h:150,label:''},{type:'house solid',x:90,y:55,w:160,h:140,label:'🏡'},{type:'house solid',x:370,y:40,w:170,h:150,label:'🏠'},{type:'house solid',x:650,y:65,w:155,h:135,label:'🏘️'},
-      {type:'fence solid',x:250,y:465,w:280,h:38,label:''},{type:'tree solid',x:115,y:475,w:75,h:90,label:'🌳'},{type:'tree solid',x:700,y:475,w:75,h:90,label:'🌲'},
-      {type:'exit',x:0,y:270,w:70,h:110,label:'← 自宅',exit:{to:'home',x:780,y:325}},{type:'exit',x:830,y:270,w:70,h:110,label:'公園 →',exit:{to:'park',x:100,y:325}}
-    ]},
-    park:{name:'公園',guide:'コインを集めよう！ 左は住宅街',className:'area-park',spawn:{x:105,y:325},objects:[
-      {type:'pond solid',x:570,y:350,w:245,h:180,label:'〰'},{type:'tree solid',x:120,y:80,w:80,h:95,label:'🌳'},{type:'tree solid',x:400,y:55,w:80,h:95,label:'🌲'},{type:'tree solid',x:735,y:85,w:80,h:95,label:'🌳'},
-      {type:'fence solid',x:255,y:455,w:210,h:38,label:''},{type:'solid',x:330,y:195,w:90,h:55,label:'🪵'},
-      {type:'exit',x:0,y:270,w:75,h:110,label:'← 住宅街',exit:{to:'street',x:785,y:325}}
-    ]}
+    home:{name:'自宅',guide:'玄関から住宅街へ',theme:'home',spawn:{x:180,y:330},objects:[obj('wall solid',40,35,820,35),obj('wall solid',40,580,820,35),obj('wall solid',40,70,35,510),obj('wall solid',825,70,35,205),obj('wall solid',825,380,35,200),obj('rug',285,235,310,190,'🏠 ぼくのお部屋'),obj('solid',115,95,190,95,'🛏️'),obj('solid',650,100,105,85,'🛋️'),obj('exit',815,275,75,105,'玄関 →',{to:'street',x:115,y:325})]},
+    street:outdoors('住宅街','左は自宅、右は公園','town',{to:'home',label:'自宅'},{to:'park',label:'公園'},[obj('house solid',290,55,160,140,'🏡'),obj('house solid',535,55,155,135,'🏠')]),
+    park:outdoors('公園','コインを集めよう！','park',{to:'street',label:'住宅街'},{to:'shopping',label:'商店街'},[obj('pond solid',570,350,245,180,'〰'),obj('solid',350,180,90,55,'🪵'),obj('exit',365,0,170,75,'夜の公園 ↑',{to:'nightpark',x:450,y:540})]),
+    shopping:outdoors('商店街','お店の入口にも入れるよ','shopping',{to:'park',label:'公園'},{to:'dogrun',label:'ドッグラン'},[obj('shop',160,40,170,150,'🛍️'),obj('shop',370,40,170,150,'☕'),obj('shop',580,40,170,150,'🏥'),obj('exit',175,100,120,90,'ペット店',{to:'petshop',x:450,y:500}),obj('exit',395,100,120,90,'カフェ',{to:'cafe',x:450,y:500}),obj('exit',605,100,120,90,'病院',{to:'hospital',x:450,y:500})]),
+    dogrun:outdoors('ドッグラン','柵の中を元気に走ろう','run',{to:'shopping',label:'商店街'},{to:'seaside',label:'海辺'},[obj('fence solid',270,70,35,160),obj('fence solid',590,70,35,160),obj('solid',420,165,70,45,'🦴')]),
+    seaside:outdoors('海辺','波の音が気持ちいいね','sea',{to:'dogrun',label:'ドッグラン'},{to:'riverside',label:'川沿い'},[obj('water solid',0,475,900,175,'🌊　🌊　🌊'),obj('solid',390,110,80,65,'⛱️')]),
+    riverside:outdoors('川沿い','川沿いの道を歩こう','river',{to:'seaside',label:'海辺'},{to:'forest',label:'森'},[obj('water solid',330,0,240,220,'〰'),obj('bridge',350,150,200,85,'橋')]),
+    forest:outdoors('森','木々の間を探検しよう','forest',{to:'riverside',label:'川沿い'},{to:'station',label:'駅前'},[obj('tree solid',280,65,80,95,'🌲'),obj('tree solid',510,65,80,95,'🌳'),obj('tree solid',420,455,80,95,'🌲')]),
+    station:outdoors('駅前','街の東の端だよ','station',{to:'forest',label:'森'},null,[obj('station solid',260,45,380,160,'🚉 パグっと駅'),obj('solid',395,430,100,60,'🚕')]),
+    petshop:indoor('ペットショップ','出口から商店街へ','🐾',{to:'shopping',label:'商店街',x:215,y:215}),hospital:indoor('動物病院','やさしい先生がいるよ','🏥',{to:'shopping',label:'商店街',x:645,y:215}),cafe:indoor('わんこカフェ','ひと休みできるよ','☕',{to:'shopping',label:'商店街',x:435,y:215}),
+    nightpark:outdoors('夜の公園','星がきらめく特別な公園','night',null,null,[obj('pond solid',570,350,245,180,'🌙'),obj('solid',350,180,90,55,'🪵'),obj('exit',365,575,170,75,'↓ 昼の公園',{to:'park',x:450,y:110})])
   };
+  const weatherNames=['晴れ','曇り','雨','大雨','風','暑い日','寒い日','雪'];
+  function environment(){const now=new Date(),hour=now.getHours(),month=now.getMonth()+1,day=Math.floor(now.getTime()/86400000),weather=weatherNames[day%weatherNames.length];return{period:hour<5?'深夜':hour<10?'朝':hour<16?'昼':hour<19?'夕方':hour<23?'夜':'深夜',season:[12,1,2].includes(month)?'冬':[3,4,5].includes(month)?'春':[6,7,8].includes(month)?'夏':'秋',weather,speed:weather==='雪'?.78:weather==='大雨'?.86:1};}
   function rectHit(x,y,o){return x+playerSize/2>o.x&&x-playerSize/2<o.x+o.w&&y+playerSize/2>o.y&&y-playerSize/2<o.y+o.h;}
-  window.PugWorld={
-    width:W,height:H,areas,current:'park',x:105,y:325,
+  window.PugWorld={width:W,height:H,areas,current:'park',x:115,y:325,environment,
     enter(id,spawn){const area=areas[id];if(!area)return;this.current=id;this.x=spawn?.x??area.spawn.x;this.y=spawn?.y??area.spawn.y;this.renderArea();this.onAreaChange?.(id);},
-    renderArea(){const area=areas[this.current],layer=document.getElementById('worldLayer'),decor=document.getElementById('worldDecor');layer.className='world-layer '+area.className;decor.innerHTML=area.objects.map((o,i)=>`<div class="world-object ${o.type}" data-object="${i}" style="left:${o.x}px;top:${o.y}px;width:${o.w}px;height:${o.h}px">${o.label||''}</div>`).join('');},
-    move(dx,dy,amount){const area=areas[this.current];let nx=Math.max(25,Math.min(W-25,this.x+dx*amount)),ny=this.y;const solids=area.objects.filter(o=>o.type.includes('solid'));if(!solids.some(o=>rectHit(nx,ny,o)))this.x=nx;nx=this.x;ny=Math.max(25,Math.min(H-25,this.y+dy*amount));if(!solids.some(o=>rectHit(nx,ny,o)))this.y=ny;const gate=area.objects.find(o=>o.exit&&rectHit(this.x,this.y,o));if(gate){this.enter(gate.exit.to,{x:gate.exit.x,y:gate.exit.y});return true;}return false;},
-    camera(viewW,viewH){return{x:Math.min(0,Math.max(viewW-W,viewW/2-this.x)),y:Math.min(0,Math.max(viewH-H,viewH/2-this.y))};}
+    renderArea(){const area=areas[this.current],env=environment(),layer=document.getElementById('worldLayer'),decor=document.getElementById('worldDecor');layer.className=`world-layer area-${area.theme} time-${env.period} season-${env.season} weather-${env.weather}`;decor.innerHTML=area.objects.map((o,i)=>`<div class="world-object ${o.type}" data-object="${i}" style="left:${o.x}px;top:${o.y}px;width:${o.w}px;height:${o.h}px">${o.label||''}</div>`).join('')+((env.weather==='雨'||env.weather==='大雨')?'<div class="weather-layer rain"></div>':env.weather==='雪'?'<div class="weather-layer snow">❄　❅　❄　❅　❄</div>':'');},
+    move(dx,dy,amount){const area=areas[this.current];let nx=Math.max(25,Math.min(W-25,this.x+dx*amount)),ny=this.y;const solids=area.objects.filter(o=>o.type.includes('solid'));if(!solids.some(o=>rectHit(nx,ny,o)))this.x=nx;nx=this.x;ny=Math.max(25,Math.min(H-25,this.y+dy*amount));if(!solids.some(o=>rectHit(nx,ny,o)))this.y=ny;const gate=area.objects.find(o=>o.exit&&rectHit(this.x,this.y,o));if(gate){this.enter(gate.exit.to,{x:gate.exit.x,y:gate.exit.y});return true;}return false;},camera(viewW,viewH){return{x:Math.min(0,Math.max(viewW-W,viewW/2-this.x)),y:Math.min(0,Math.max(viewH-H,viewH/2-this.y))};}
   };
 })();

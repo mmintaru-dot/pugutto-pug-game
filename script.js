@@ -57,6 +57,7 @@ function renderWalk(){
   $('walkPug').classList.toggle('moving',walk.keys.size>0);
   $('walkCoinText').textContent=state.coins;$('walkEarnedText').textContent=walk.earned;
   $('areaNameText').textContent=PugWorld.areas[PugWorld.current].name;$('areaGuideText').textContent=PugWorld.areas[PugWorld.current].guide;
+  const env=PugWorld.environment();$('seasonText').textContent=env.season;$('periodText').textContent=env.period;$('weatherText').textContent=env.weather;
   $('walkCoins').innerHTML=PugWorld.current==='park'?walk.coins.filter(c=>!c.collected).map(c=>`<span class="map-coin" style="left:${c.x}px;top:${c.y}px">¥</span>`).join(''):'';
   const view=$('parkMap'),camera=PugWorld.camera(view.clientWidth,view.clientHeight);$('worldLayer').style.transform=`translate3d(${camera.x}px,${camera.y}px,0)`;
 }
@@ -68,7 +69,7 @@ function moveWalk(dx,dy,amount){
 function walkLoop(time){
   if(!walk.active)return;const delta=Math.min(32,time-walk.lastTime);walk.lastTime=time;let dx=0,dy=0;
   if(walk.keys.has('left'))dx--;if(walk.keys.has('right'))dx++;if(walk.keys.has('up'))dy--;if(walk.keys.has('down'))dy++;
-  if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.025);}
+  if(dx||dy){const length=Math.hypot(dx,dy);moveWalk(dx/length,dy/length,delta*.025*PugWorld.environment().speed);}
   walk.frame=requestAnimationFrame(walkLoop);
 }
 function showCoinPop(x,y,value){const pop=document.createElement('span');pop.className='coin-pop';pop.textContent=`+${value} 🪙`;pop.style.left=x+'px';pop.style.top=y+'px';$('worldLayer').appendChild(pop);setTimeout(()=>pop.remove(),750);}
